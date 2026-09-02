@@ -1,0 +1,76 @@
+{
+  "clinical_claims_authorized": false,
+  "dataset": {
+    "split_images": {
+      "test": 4,
+      "train": 56,
+      "validation": 12
+    },
+    "split_patients": {
+      "test": 2,
+      "train": 28,
+      "validation": 6
+    },
+    "total_images": 72
+  },
+  "final": {
+    "train": {
+      "cosine_similarity": 0.9735704064369202,
+      "dead_feature_fraction": 0.61328125,
+      "explained_variance": 0.9556450843811035,
+      "max_active_features": 8,
+      "mean_activation": 2.094006061553955,
+      "mean_active_features": 8.0,
+      "mse": 0.044354915618896484,
+      "saturated_feature_fraction": 0.0
+    },
+    "validation": {
+      "cosine_similarity": 0.805708110332489,
+      "dead_feature_fraction": 0.796875,
+      "explained_variance": 0.6063591241836548,
+      "max_active_features": 8,
+      "mean_activation": 1.9797817468643188,
+      "mean_active_features": 8.0,
+      "mse": 0.36088141798973083,
+      "saturated_feature_fraction": 0.0
+    }
+  },
+  "gates": {
+    "better_than_same_budget_sparse_baseline": true,
+    "checkpoint_saved_and_reloaded": true,
+    "deterministic_evaluation": true,
+    "encoder_frozen": true,
+    "exact_top_k_or_fewer": true,
+    "reconstruction_improved": true
+  },
+  "hashes": {
+    "data_split": "735b6c03f8685f30fd3a32b3d4860dfec355f2ad6855828b06d0a6eab282e6ae",
+    "embedding_cache": "73056d2da5d691e9d16f5855c53fa8a75a30d4aa9da19f02621b06888b50fdd7",
+    "encoder_checkpoint": "5209a7ce4624e0b4c5789ba97a24650d3ce71b84d84fd3b1ce54e8c96f1bf2b8",
+    "sae_checkpoint": "fcda4d7f00e6735ea3e26736a0a8d4cabee8981ce50a6c884df5e03289e46548"
+  },
+  "initial_validation": {
+    "cosine_similarity": 0.019348381087183952,
+    "dead_feature_fraction": 0.71484375,
+    "explained_variance": -0.3411787748336792,
+    "max_active_features": 8,
+    "mean_activation": 1.261949062347412,
+    "mean_active_features": 8.0,
+    "mse": 1.229563593864441,
+    "saturated_feature_fraction": 0.0
+  },
+  "same_budget_sparse_coordinate_baseline": {
+    "cosine_similarity": 0.6584879755973816,
+    "explained_variance": 0.35345011949539185,
+    "max_active_features": 8,
+    "mean_active_features": 8.0,
+    "mse": 0.5927428603172302
+  },
+  "scope": "synthetic training-only pipeline smoke test; no clinical conclusions",
+  "unavailable_requirements": [
+    "approved retinal images",
+    "validated RETFound-CFP checkpoint",
+    "clinical labels/masks",
+    "clinician review"
+  ]
+}

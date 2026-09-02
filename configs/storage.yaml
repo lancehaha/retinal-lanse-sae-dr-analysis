@@ -1,0 +1,31 @@
+{
+  "storage_policy_version": "1.0",
+  "external_only": true,
+  "external_root": "/Volumes/Elements/Retina-LanSE",
+  "minimum_free_bytes_before_download": 536870912000,
+  "paths": {
+    "raw_archives": "/Volumes/Elements/Retina-LanSE/raw_archives",
+    "datasets": "/Volumes/Elements/Retina-LanSE/datasets",
+    "model_weights": "/Volumes/Elements/Retina-LanSE/model_weights",
+    "embedding_cache": "/Volumes/Elements/Retina-LanSE/embeddings",
+    "tile_cache": "/Volumes/Elements/Retina-LanSE/tiles",
+    "checkpoints": "/Volumes/Elements/Retina-LanSE/checkpoints",
+    "experiment_runs": "/Volumes/Elements/Retina-LanSE/experiments",
+    "temporary_work": "/Volumes/Elements/Retina-LanSE/tmp"
+  },
+  "system_disk_allowed": [
+    "source_code",
+    "small_configuration_files",
+    "small_reports_and_manifests"
+  ],
+  "system_disk_forbidden": [
+    "retinal_image_archives",
+    "extracted_retinal_datasets",
+    "foundation_model_weights",
+    "embedding_shards",
+    "tile_caches",
+    "large_checkpoints",
+    "experiment_tensor_outputs"
+  ]
+}
+

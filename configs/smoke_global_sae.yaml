@@ -1,0 +1,35 @@
+{
+  "experiment_name": "phase_a_global_sae_smoke",
+  "seed": 4106,
+  "data": {
+    "root": "artifacts/data/synthetic_fundus",
+    "manifest": "artifacts/data/synthetic_fundus/manifest.jsonl",
+    "num_patients": 36,
+    "images_per_patient": 2,
+    "image_size": 96,
+    "split_fractions": [0.70, 0.20, 0.10],
+    "preprocessing_version": "synthetic-fundus-v1"
+  },
+  "encoder": {
+    "name": "deterministic-smoke-encoder",
+    "input_size": 64,
+    "embedding_dim": 64,
+    "pool_size": 8,
+    "seed": 173
+  },
+  "sae": {
+    "dictionary_expansion": 4,
+    "top_k": 8,
+    "learning_rate": 0.001,
+    "batch_size": 16,
+    "epochs": 100,
+    "weight_decay": 0.00001
+  },
+  "artifacts": {
+    "embeddings": "artifacts/embeddings/smoke_global_embeddings.pt",
+    "checkpoint": "artifacts/checkpoints/smoke_global_sae.pt",
+    "metrics": "artifacts/experiments/phase_a_global_sae_smoke/metrics.json",
+    "curves": "artifacts/experiments/phase_a_global_sae_smoke/training_curves.csv",
+    "registry": "artifacts/neuron_registry.sqlite"
+  }
+}

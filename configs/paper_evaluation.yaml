@@ -1,0 +1,24 @@
+{
+  "protocol_version": "0.1",
+  "candidate_limit_per_branch_per_concept": 25,
+  "evidence_sampling": {"top": 50, "medium": 20, "matched_negative": 50},
+  "primary_concepts": ["hemorrhage", "hard_exudate", "soft_exudate", "microaneurysm"],
+  "metrics": {
+    "association": ["auroc", "auprc", "sensitivity", "specificity"],
+    "localization": ["pointing_game", "tile_average_precision", "dice", "iou", "nearest_lesion_distance"],
+    "representation": ["mse", "explained_variance", "cosine_similarity", "dead_fraction", "saturated_fraction"],
+    "intervention": ["lesion_activation_drop", "matched_control_activation_drop"]
+  },
+  "statistics": {
+    "resampling_unit": "patient_or_examination",
+    "bootstrap_resamples": 2000,
+    "confidence_level": 0.95,
+    "multiple_testing": "benjamini_hochberg",
+    "fdr_q": 0.05,
+    "report_all_seeds": true
+  },
+  "test_threshold_source": "ddr_validation_only",
+  "external_test_access": "locked_until_freeze_manifest",
+  "clinical_claims": false
+}
+

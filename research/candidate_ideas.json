@@ -1,0 +1,33 @@
+[
+  {
+    "name": "global_retfound_sae",
+    "title": "Sparse decomposition of global RETFound embeddings",
+    "hypothesis": "Global sparse features associate with DR grades and image-level lesion presence.",
+    "related_work_gap": "Retinal foundation-model representations remain under-explored, but LanSE already establishes medical sparse encoders on chest X-rays.",
+    "minimal_experiment": "Train global Top-K SAEs on EyePACS embeddings and test lesion association on DDR/IDRiD.",
+    "risk": "Low novelty and weak spatial evidence; global resizing may erase small lesions.",
+    "scores": {"novelty": 2, "feasibility": 5, "clinical_relevance": 3, "evidence_strength": 2},
+    "decision": "baseline_only"
+  },
+  {
+    "name": "dual_scale_spatial_sae",
+    "title": "Dual-scale sparse features with lesion-mask and occlusion validation",
+    "hypothesis": "Separate global and high-resolution tile SAEs recover stable global context and spatially localized lesion features.",
+    "related_work_gap": "LanSE demonstrates medical sparse encoders but identifies region/token-level localization as future work; retinal masks allow direct spatial and intervention tests.",
+    "minimal_experiment": "Train both SAEs without lesion labels, freeze them, then evaluate predefined DR lesions on DDR development and locked IDRiD/FGADR external sets.",
+    "risk": "Large tile compute, small external mask sets, scale and optic-disc confounding.",
+    "scores": {"novelty": 4, "feasibility": 4, "clinical_relevance": 5, "evidence_strength": 5},
+    "decision": "selected_primary"
+  },
+  {
+    "name": "lesion_transcoder",
+    "title": "Task-targeted sparse transcoders for rare retinal lesions",
+    "hypothesis": "A supervised lesion transcoder improves rare-lesion feature coverage over reconstruction-only SAEs.",
+    "related_work_gap": "LanSE uses transcoders for rare targeted patterns, so a retinal adaptation alone is not sufficiently novel.",
+    "minimal_experiment": "Train a lesion classifier on DDR development data and sparsely transcode its hidden activations.",
+    "risk": "Supervision weakens unsupervised-discovery claims and can overfit limited masks.",
+    "scores": {"novelty": 2, "feasibility": 3, "clinical_relevance": 4, "evidence_strength": 4},
+    "decision": "secondary_ablation"
+  }
+]
+

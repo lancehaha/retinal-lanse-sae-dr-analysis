@@ -1,0 +1,26 @@
+{
+  "protocol_version": "0.1",
+  "experiment": "paper_local_sae_search",
+  "storage_config": "configs/storage.yaml",
+  "inherits_patient_split_from": "configs/paper_global_sae.yaml",
+  "source_images": "eyepacs_kaggle_original_resolution",
+  "encoder": "RETFound_mae_natureCFP_frozen",
+  "tiling": {
+    "main_tile_size_original_pixels": 448,
+    "ablation_tile_size_original_pixels": 224,
+    "overlap_fraction": 0.50,
+    "minimum_retinal_coverage": 0.80,
+    "coordinates_in_original_image": true,
+    "label_guided_sampling": false
+  },
+  "search": {
+    "dictionary_expansion": [4, 8],
+    "top_k": [16, 32],
+    "learning_rate": [0.0001, 0.0003],
+    "final_seeds": [4106, 4107, 4108, 4109, 4110]
+  },
+  "development_masks": "ddr_official_development_split",
+  "locked_external_masks": ["idrid", "fgadr"],
+  "primary_lesions": ["hemorrhage", "hard_exudate", "soft_exudate", "microaneurysm"],
+  "research_only": true
+}

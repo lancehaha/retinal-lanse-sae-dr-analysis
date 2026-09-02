@@ -1,0 +1,31 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# Credentials and local environment files
+.env
+.env.*
+**/token
+**/stored_tokens
+*.key
+
+# Publication-scale archives, retinal images, weights, and tensor caches
+*.zip
+*.zip.*
+*.jpeg
+*.jpg
+*.tif
+*.tiff
+*.pth
+*.pt
+model_weights/
+embeddings/
+tiles/
+checkpoints/
+raw_archives/
+datasets/
+
+# Generated pilot tensors/images; keep only small reports and metadata in Git
+artifacts/data/
+artifacts/embeddings/
+artifacts/checkpoints/

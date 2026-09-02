@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "captured_at": "2026-08-28",
+  "source": "Kaggle competition diabetic-retinopathy-detection",
+  "listing_command": "kaggle competitions files diabetic-retinopathy-detection --csv",
+  "authentication": "verified_by_successful_file_listing",
+  "download_authorization": "blocked_http_403_pending_rules_acceptance",
+  "files": [
+    {"name": "sample.zip", "expected_bytes": 10905224},
+    {"name": "sampleSubmission.csv.zip", "expected_bytes": 83511},
+    {"name": "test.zip.001", "expected_bytes": 8388608000},
+    {"name": "test.zip.002", "expected_bytes": 8388608000},
+    {"name": "test.zip.003", "expected_bytes": 8388608000},
+    {"name": "test.zip.004", "expected_bytes": 8388608000},
+    {"name": "test.zip.005", "expected_bytes": 8388608000},
+    {"name": "test.zip.006", "expected_bytes": 8388608000},
+    {"name": "test.zip.007", "expected_bytes": 2957950430},
+    {"name": "train.zip.001", "expected_bytes": 8388608000},
+    {"name": "train.zip.002", "expected_bytes": 8388608000},
+    {"name": "train.zip.003", "expected_bytes": 8388608000},
+    {"name": "train.zip.004", "expected_bytes": 8388608000},
+    {"name": "train.zip.005", "expected_bytes": 1434013506},
+    {"name": "trainLabels.csv.zip", "expected_bytes": 71069}
+  ]
+}
