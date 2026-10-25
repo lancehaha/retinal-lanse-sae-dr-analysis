@@ -16,6 +16,12 @@ __pycache__/
 *.jpg
 *.tif
 *.tiff
+*.png
+*.npy
+*.npz
+*.nii
+*.nii.gz
+*.csv
 *.pth
 *.pt
 model_weights/
@@ -29,3 +35,9 @@ datasets/
 artifacts/data/
 artifacts/embeddings/
 artifacts/checkpoints/
+
+# Local editor/build exports and experiment handoffs
+.chart-data-*/
+.codex-*/
+presentation_output/
+*.log

@@ -25,9 +25,189 @@ from retina_lanse.sae.trainer import train_sae_batched
 from retina_lanse.utils import sha256_file, stable_hash, verify_file_hash_bundle
 from scripts.audit_near_duplicate_leakage import lsh_bands
 from scripts.remediate_near_duplicate_manifest import remediate_records
+from scripts.run_vlm_ablation_diagnostics import bootstrap_ci, ece, metric_bundle
+from scripts.run_vlm_featurecard_ablation import select_context_cards
+from scripts.score_clinician_reviews import fleiss_kappa, pairwise_exact_agreement
+from scripts.check_stage6_external_gate import check_stage6_gate
+from scripts.prepare_stage6_image_manifest import build_records, load_labels
+from scripts.run_feature_card_dr_prediction import (
+    bh_adjust,
+    card_matrix,
+    evidence_logits,
+    fit_evidence_tables,
+    parse_batch_probability_json,
+    parse_probability_json,
+    softmax,
+)
+from scripts.run_supervised_identity_rank_fusion import (
+    DICTIONARY_SIZE,
+    IdentityRankTransformer,
+    apply_scaling,
+    fit_scaling,
+    validate_trace,
+)
 
 
 class PipelineTests(unittest.TestCase):
+    def test_experiment6_card_matrix_preserves_feature_identity(self):
+        feature_ids = torch.full((2, 1024), -1, dtype=torch.int32).numpy()
+        values = torch.zeros((2, 1024), dtype=torch.float32).numpy()
+        feature_ids[0, :3] = [9, 3, 7]
+        values[0, :3] = [1.2, 0.8, 0.4]
+        feature_ids[1, :2] = [3, 9]
+        values[1, :2] = [1.1, 0.2]
+        cards = torch.arange(256, dtype=torch.int64).numpy()
+        matrix = card_matrix(feature_ids, values, cards)
+        self.assertEqual(matrix.shape, (2, 256))
+        self.assertAlmostEqual(float(matrix[0, 9]), 1.2)
+        self.assertAlmostEqual(float(matrix[1, 3]), 1.1)
+        self.assertEqual(int((matrix > 0).sum()), 5)
+
+    def test_experiment6_evidence_probabilities_are_complete(self):
+        matrix = torch.zeros((20, 256), dtype=torch.float32).numpy()
+        grades = torch.tensor([0, 1, 2, 3, 4] * 4).numpy()
+        for row in range(20):
+            matrix[row, grades[row]] = 0.5 + grades[row]
+        tables = fit_evidence_tables(matrix, grades)
+        probabilities = softmax(evidence_logits(matrix, tables, torch.ones(256, dtype=torch.bool).numpy()))
+        self.assertEqual(probabilities.shape, (20, 5))
+        self.assertTrue(torch.allclose(torch.from_numpy(probabilities.sum(axis=1)), torch.ones(20, dtype=torch.float64)))
+        parsed = parse_probability_json('{"grade_probabilities":[1,2,3,4,5]}')
+        self.assertIsNotNone(parsed)
+        self.assertAlmostEqual(sum(parsed["grade_probabilities"]), 1.0)
+        self.assertIsNone(parse_probability_json('{"grade_probabilities":[1,2]}'))
+        batch = parse_batch_probability_json(
+            '{"predictions":[{"case_id":0,"grade_probabilities":[1,0,0,0,0]},'
+            '{"case_id":1,"grade_probabilities":[0,0,1,0,0]}]}',
+            2,
+        )
+        self.assertEqual(sorted(batch), [0, 1])
+        self.assertIsNone(parse_batch_probability_json('{"predictions":[]}', 2))
+        adjusted = bh_adjust(torch.tensor([0.01, 0.03, 0.20]).numpy())
+        self.assertTrue(all(0 <= value <= 1 for value in adjusted))
+
+    def test_experiment7_trace_and_padding_contract(self):
+        feature_ids = torch.full((2, 1024), -1, dtype=torch.int64).numpy()
+        values = torch.zeros((2, 1024), dtype=torch.float32).numpy()
+        feature_ids[:, :3] = [1, 2, 3]
+        values[:, :3] = [3.0, 2.0, 1.0]
+        validate_trace(feature_ids, values, 2)
+        dense = torch.randn(2, 1024).numpy()
+        scaling = fit_scaling(dense, feature_ids, values)
+        dense_scaled, values_scaled = apply_scaling(dense, feature_ids, values, scaling)
+        model = IdentityRankTransformer(1, use_identity=True, use_position=True).eval()
+        ids_tensor = torch.from_numpy(feature_ids)
+        value_tensor = torch.from_numpy(values_scaled)
+        with torch.inference_mode():
+            first = model(torch.from_numpy(dense_scaled), ids_tensor, value_tensor)
+            changed = value_tensor.clone()
+            changed[ids_tensor < 0] = 999.0
+            second = model(torch.from_numpy(dense_scaled), ids_tensor, changed)
+        self.assertEqual(model.feature_identity_embedding.num_embeddings, DICTIONARY_SIZE + 1)
+        self.assertTrue(torch.allclose(first, second, atol=1e-5))
+
+    def test_stage6_manifest_builder_matches_images_and_labels(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            image_root = root / "images"
+            image_root.mkdir()
+            Image.new("RGB", (12, 8), color=(20, 30, 40)).save(image_root / "IDRiD_001.jpg")
+            labels_path = root / "labels.csv"
+            labels_path.write_text("image,grade\nIDRiD_001.jpg,2\n", encoding="utf-8")
+            labels = load_labels(labels_path)
+            records = build_records("idrid", root, image_root, labels)
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0]["split"], "external")
+            self.assertEqual(records[0]["referable_dr"], 1)
+            self.assertEqual(len(records[0]["sha256"]), 64)
+
+    def test_stage6_gate_fails_closed_without_approved_external_inputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            report = check_stage6_gate(
+                dataset="idrid",
+                external_root=root,
+                dataset_root=root / "datasets" / "idrid",
+                approval_path=root / "datasets" / "idrid" / "access_approval.json",
+                manifest_path=root / "datasets" / "idrid" / "manifest.jsonl",
+                release_manifest_path=root / "experiments" / "release.json",
+                clinician_status_path=root / "experiments" / "clinician.json",
+            )
+            self.assertEqual(report["status"], "blocked_external_access")
+            self.assertFalse(report["inference_performed"])
+            self.assertTrue(any("approved dataset directory" in reason for reason in report["reasons"]))
+
+    def test_stage6_gate_accepts_complete_provenance_contract(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            dataset = root / "datasets" / "idrid"
+            dataset.mkdir(parents=True)
+            image = dataset / "sample.png"
+            image.write_bytes(b"not-a-real-image-but-a-verified-fixture")
+            digest = sha256_path(image)
+            (dataset / "manifest.jsonl").write_text(
+                json.dumps(
+                    {
+                        "relative_path": "sample.png",
+                        "patient_id": "p1",
+                        "label": 1,
+                        "sha256": digest,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (dataset / "access_approval.json").write_text(
+                json.dumps(
+                    {
+                        "approved": True,
+                        "source_url": "https://official.example/idrid",
+                        "license": "research terms",
+                        "agreement_reference": "approval-1",
+                        "archive_sha256": "a" * 64,
+                        "access_date": "2026-09-05",
+                        "labels_verified": True,
+                        "patient_grouping_verified": True,
+                        "preprocessing_recorded": True,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            experiments = root / "experiments"
+            experiments.mkdir()
+            release = experiments / "release.json"
+            release.write_text(
+                json.dumps(
+                    {
+                        "all_heavy_outputs_on_external_drive": True,
+                        "locked_internal_test_accessed": True,
+                        "paper_claim_boundary": "frozen exploratory evidence",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            clinician = experiments / "clinician.json"
+            clinician.write_text(
+                json.dumps(
+                    {
+                        "status": "complete_clinician_reviews",
+                        "complete_rows": 192,
+                        "expected_rows": 192,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            report = check_stage6_gate(
+                dataset="idrid",
+                external_root=root,
+                dataset_root=dataset,
+                approval_path=dataset / "access_approval.json",
+                manifest_path=dataset / "manifest.jsonl",
+                release_manifest_path=release,
+                clinician_status_path=clinician,
+            )
+            self.assertEqual(report["status"], "ready_for_one_time_run")
+            self.assertEqual(report["evidence"]["manifest"]["rows"], 1)
     def test_patient_splits_are_deterministic_and_disjoint(self):
         patients = [f"p{i}" for i in range(100)]
         first = patient_level_splits(patients, (0.7, 0.2, 0.1), 7)
@@ -255,6 +435,31 @@ class PipelineTests(unittest.TestCase):
         left = stable_patient_split("123", seed=17, train_fraction=0.7, validation_fraction=0.2)
         right = stable_patient_split("123", seed=17, train_fraction=0.7, validation_fraction=0.2)
         self.assertEqual(left, right)
+
+    def test_vlm_diagnostics_are_deterministic_and_patient_clustered(self):
+        targets = torch.tensor([0, 1, 0, 1]).numpy()
+        scores = torch.tensor([0.05, 0.95, 0.05, 0.95]).numpy()
+        self.assertAlmostEqual(ece(targets, scores), 0.05, places=6)
+        bundle = metric_bundle(targets, scores)
+        self.assertAlmostEqual(bundle["auroc"], 1.0)
+        first = bootstrap_ci(targets, scores, ["a", "a", "b", "b"], seed=5, resamples=100)
+        second = bootstrap_ci(targets, scores, ["a", "a", "b", "b"], seed=5, resamples=100)
+        self.assertEqual(first, second)
+        self.assertEqual(first["patients"], 2)
+
+    def test_random_feature_cards_match_count_and_are_reproducible(self):
+        cards = {1: {"hypothesis": "a"}, 2: {"hypothesis": "b"}, 3: {"hypothesis": "c"}, 4: {"hypothesis": "d"}}
+        active = select_context_cards([1, 2, 99], cards, "active", 4106, "train/x.jpeg")
+        random_first = select_context_cards([1, 2, 99], cards, "random", 4106, "train/x.jpeg")
+        random_second = select_context_cards([1, 2, 99], cards, "random", 4106, "train/x.jpeg")
+        self.assertEqual(len(active), len(random_first))
+        self.assertEqual(random_first, random_second)
+        self.assertTrue(all(card["feature_id"] not in {1, 2} for card in random_first))
+
+    def test_clinician_agreement_statistics(self):
+        ratings = [[0, 0, 1], [2, 2, 2], [3, 3, 3]]
+        self.assertAlmostEqual(pairwise_exact_agreement(ratings), 7 / 9)
+        self.assertIsNotNone(fleiss_kappa(ratings))
 
     def test_registry_schema_initializes(self):
         with tempfile.TemporaryDirectory() as directory:

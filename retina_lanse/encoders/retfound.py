@@ -58,6 +58,40 @@ class RETFoundCFPEncoder(FrozenRetinalEncoder):
             raise RuntimeError(f"Unexpected RETFound feature shape: {tuple(features.shape)}")
         return features
 
+    def forward_patch_tokens(self, images: torch.Tensor) -> torch.Tensor:
+        """Return the 14x14 final ViT patch tokens before global pooling.
+
+        The official RETFound feature path exposes only a pooled token.  This
+        method deliberately reproduces the official transformer forward pass
+        through the final block, retaining the 196 non-CLS tokens.  Consumers
+        must use :meth:`pool_patch_tokens` when checking parity with the
+        published ``final_mean_patch`` representation.
+        """
+        if images.ndim != 4 or images.shape[1:] != (3, self.input_size, self.input_size):
+            raise ValueError(
+                f"RETFound CFP expects NCHW tensors shaped (N, 3, 224, 224); got {tuple(images.shape)}"
+            )
+        model = self.model
+        x = model.patch_embed(images.float())
+        cls = model.cls_token.expand(x.shape[0], -1, -1)
+        x = torch.cat((cls, x), dim=1)
+        x = x + model.pos_embed
+        x = model.pos_drop(x)
+        for block in model.blocks:
+            x = block(x)
+        patches = x[:, 1:, :]
+        if patches.shape[1:] != (196, self.embedding_dim):
+            raise RuntimeError(f"Unexpected RETFound patch-token shape: {tuple(patches.shape)}")
+        return patches
+
+    def pool_patch_tokens(self, patch_tokens: torch.Tensor) -> torch.Tensor:
+        """Pool raw final patch tokens exactly as the configured RETFound path."""
+        if patch_tokens.ndim != 3 or patch_tokens.shape[1:] != (196, self.embedding_dim):
+            raise ValueError(f"Expected [N,196,{self.embedding_dim}] patch tokens, got {tuple(patch_tokens.shape)}")
+        if self.representation != "final_mean_patch":
+            raise RuntimeError("Patch-token pooling parity is defined only for final_mean_patch")
+        return self.model.fc_norm(patch_tokens.mean(dim=1, keepdim=True))[:, 0]
+
 
 def load_retfound_cfp(
     checkpoint: str | Path,
@@ -65,6 +99,7 @@ def load_retfound_cfp(
     *,
     map_location: str | torch.device = "cpu",
     representation: str = "final_mean_patch",
+    recorded_checkpoint_hash: str | None = None,
 ) -> RETFoundCFPEncoder:
     """Load official architecture and base CFP weights, failing closed on drift."""
     checkpoint_path = Path(checkpoint).expanduser().resolve()
@@ -125,4 +160,9 @@ def load_retfound_cfp(
         "missing_keys": sorted(incompatible.missing_keys),
         "unexpected_keys": sorted(incompatible.unexpected_keys),
     }
-    return RETFoundCFPEncoder(model, sha256_file(checkpoint_path), representation, load_report)
+    # Patch-token extraction may reuse a hash already verified by a frozen
+    # global embedding run using this exact checkpoint path.  This avoids a
+    # second multi-gigabyte read solely for hashing; callers must retain the
+    # source evidence hash in their own provenance record.
+    checkpoint_hash = recorded_checkpoint_hash or sha256_file(checkpoint_path)
+    return RETFoundCFPEncoder(model, checkpoint_hash, representation, load_report)
