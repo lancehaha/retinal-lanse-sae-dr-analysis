@@ -144,3 +144,13 @@ patient IDs, dimensions, perceptual hashes, and SHA-256 values before the gate
 can be rerun. It performs no download and accepts no unofficial mirror.
 The required folder/CSV/access-record contract is documented in
 `research/STAGE6_DATA_INTAKE_TEMPLATE.md`.
+
+## Later SAE experiments
+
+The retinal SAE work continued through label-efficiency, activation-capacity,
+feature-card, supervised-fusion, patch-SAE, and image-plus-card pilots. The
+reader-facing synthesis is [`research/RETINA_SAE_RESEARCH_STORY_20261101.md`](research/RETINA_SAE_RESEARCH_STORY_20261101.md), and the comparison table is
+[`research/RESULTS_SUMMARY.md`](research/RESULTS_SUMMARY.md). Individual
+protocols and results are under `research/EXPERIMENT_*.md`; executable runners
+are under `scripts/`. These later exploratory results do not establish a
+clinical-performance or lesion-grounding claim.
